@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setpoint — training log</title>
+<meta name="theme-color" content="#16171a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Setpoint">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#16171a;
+    --surface:#1e2023;
+    --surface-raised:#25272b;
+    --border:#34363b;
+    --border-strong:#46484e;
+    --text:#ece9e0;
+    --text-dim:#98978f;
+    --text-faint:#5f6067;
+    --brass:#c08a2e;
+    --brass-dim:#8a6522;
+    --olive:#7c9a68;
+    --olive-dim:#4d5f40;
+    --rust:#b8543a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .app{max-width:1000px;margin:0 auto;padding:22px 20px 60px;}
+
+  /* profile bar */
+  .profile-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+  .profile-pill{
+    display:flex;align-items:center;gap:6px;
+    background:var(--surface);border:1px solid var(--border);border-radius:20px;
+    padding:5px 6px 5px 14px;cursor:pointer;font-size:13px;color:var(--text-dim);
+  }
+  .profile-pill.active{border-color:var(--brass);color:var(--text);background:var(--surface-raised);}
+  .profile-pill .del{
+    background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:11px;
+    width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  }
+  .profile-pill .del:hover{color:var(--rust);background:rgba(184,84,58,.12);}
+  .profile-add{
+    background:none;border:1px dashed var(--border-strong);color:var(--text-faint);
+    border-radius:20px;padding:6px 14px;cursor:pointer;font-size:13px;
+  }
+  .profile-add:hover{color:var(--brass);border-color:var(--brass);}
+
+  /* header */
+  .header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;border-bottom:2px solid var(--border-strong);padding-bottom:16px;}
+  .header h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:28px;
+    letter-spacing:1px;
+    margin:0;
+    color:var(--text);
+  }
+  .header .tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--brass);
+    letter-spacing:2px;
+    text-transform:uppercase;
+  }
+  .header-right{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);text-align:right;}
+
+  /* day tabs */
+  .day-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+  .day-tab{
+    font-family:'Oswald',sans-serif;letter-spacing:.5px;font-size:13px;text-transform:uppercase;
+    background:var(--surface);border:1px solid var(--border);border-bottom:3px solid var(--border);
+    padding:8px 16px;border-radius:3px 3px 0 0;cursor:pointer;color:var(--text-dim);
+    position:relative;
+  }
+  .day-tab.active{border-bottom-color:var(--brass);color:var(--text);background:var(--surface-raised);}
+  .day-tab .del{
+    margin-left:8px;background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:11px;
+  }
+  .day-tab .del:hover{color:var(--rust);}
+  .day-add{
+    background:none;border:1px dashed var(--border-strong);color:var(--text-faint);
+    padding:8px 14px;border-radius:3px;cursor:pointer;font-size:13px;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.5px;
+  }
+  .day-add:hover{color:var(--brass);border-color:var(--brass);}
+
+  .layout{display:grid;grid-template-columns:230px 1fr;gap:24px;}
+  @media(max-width:720px){.layout{grid-template-columns:1fr;}}
+
+  /* sidebar */
+  .sidebar{display:flex;flex-direction:column;gap:8px;}
+  .add-exercise{display:flex;gap:6px;margin-bottom:10px;}
+  .add-exercise input{
+    flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);
+    padding:8px 10px;border-radius:3px;font-family:'Inter',sans-serif;font-size:13px;
+  }
+  .add-exercise input:focus{outline:none;border-color:var(--brass);}
+  .add-exercise button{
+    background:var(--brass-dim);color:var(--text);border:1px solid var(--brass);
+    border-radius:3px;padding:0 12px;cursor:pointer;font-size:16px;line-height:1;
+  }
+  .add-exercise button:hover{background:var(--brass);}
+
+  .ex-item{
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-left:4px solid var(--border-strong);
+    padding:10px 12px;
+    border-radius:2px;
+    cursor:pointer;
+    transition:border-color .12s, background .12s;
+  }
+  .ex-item:hover{background:var(--surface-raised);}
+  .ex-item.active{border-left-color:var(--brass);background:var(--surface-raised);}
+  .ex-item .name{font-weight:500;font-size:14px;}
+  .ex-item .meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-faint);margin-top:3px;}
+  .ex-item .del{
+    position:absolute;top:8px;right:8px;color:var(--text-faint);
+    background:none;border:none;cursor:pointer;font-size:14px;opacity:0;transition:opacity .12s;
+  }
+  .ex-item:hover .del{opacity:1;}
+  .ex-item .del:hover{color:var(--rust);}
+
+  .empty-side{color:var(--text-faint);font-size:13px;padding:16px 4px;line-height:1.6;}
+
+  /* main panel */
+  .main{min-height:200px;}
+  .placeholder{
+    display:flex;align-items:center;justify-content:center;height:260px;text-align:center;padding:0 20px;
+    color:var(--text-faint);font-size:14px;border:1px dashed var(--border);border-radius:4px;
+  }
+
+  .placard{
+    background:linear-gradient(180deg,var(--surface-raised),var(--surface));
+    border:1px solid var(--border-strong);
+    border-radius:4px;
+    padding:20px 22px;
+    margin-bottom:22px;
+    position:relative;
+  }
+  .placard::before{
+    content:'';position:absolute;top:10px;right:12px;width:6px;height:6px;border-radius:50%;
+    background:var(--border-strong);box-shadow:0 20px 0 var(--border-strong);
+  }
+  .placard .ex-name{
+    font-family:'Oswald',sans-serif;font-weight:600;font-size:20px;letter-spacing:.5px;
+    margin:0 0 2px;
+  }
+  .placard .as-of{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-faint);margin-bottom:16px;}
+  .placard .no-entries{color:var(--text-dim);font-size:13px;padding:8px 0;}
+  .stat-row{display:flex;flex-wrap:wrap;gap:28px;margin-bottom:14px;}
+  .stat{}
+  .stat .val{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:var(--brass);}
+  .stat .unit{font-size:14px;color:var(--text-dim);margin-left:3px;}
+  .stat .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-faint);margin-top:2px;}
+  .settings-line{
+    font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--olive);
+    background:rgba(124,154,104,.08);border:1px solid var(--olive-dim);
+    padding:8px 10px;border-radius:3px;margin-top:4px;
+  }
+  .notes-line{font-size:12px;color:var(--text-dim);margin-top:8px;font-style:italic;}
+
+  /* log table */
+  .log-title{font-family:'Oswald',sans-serif;font-size:14px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin:0 0 10px;}
+  .log-list{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--border);}
+  .log-row{
+    display:grid;grid-template-columns:88px 90px 70px 1fr 26px;gap:12px;align-items:center;
+    padding:10px 4px;border-bottom:1px solid var(--border);font-size:13px;
+  }
+  .log-row .date{font-family:'IBM Plex Mono',monospace;color:var(--text-dim);font-size:12px;}
+  .log-row .weight{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--text);}
+  .log-row .setsreps{font-family:'IBM Plex Mono',monospace;color:var(--text-dim);font-size:12px;}
+  .log-row .settings{color:var(--text-dim);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .log-row .del{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:13px;}
+  .log-row .del:hover{color:var(--rust);}
+  .log-empty{color:var(--text-faint);font-size:13px;padding:16px 4px;}
+
+  /* entry form */
+  .entry-form{
+    margin-top:24px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px 18px;
+  }
+  .entry-form h3{
+    font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:1px;text-transform:uppercase;
+    color:var(--text-dim);margin:0 0 14px;
+  }
+  .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;}
+  @media(max-width:640px){.form-grid{grid-template-columns:1fr 1fr;}}
+  .field label{display:block;font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+  .field input, .field select{
+    width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+    padding:8px 9px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:13px;
+  }
+  .field input:focus, .field select:focus{outline:none;border-color:var(--brass);}
+  .field-wide{grid-column:1/-1;}
+  .field-wide input{font-family:'Inter',sans-serif;}
+  .submit-row{display:flex;justify-content:flex-end;margin-top:4px;}
+  .submit-row button{
+    background:var(--brass-dim);border:1px solid var(--brass);color:var(--text);
+    padding:9px 18px;border-radius:3px;cursor:pointer;font-family:'Oswald',sans-serif;
+    letter-spacing:.5px;font-size:13px;text-transform:uppercase;
+  }
+  .submit-row button:hover{background:var(--brass);}
+
+  .status{position:fixed;bottom:16px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-faint);}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="profile-bar" id="profileBar"></div>
+
+  <div class="header">
+    <div>
+      <h1>SETPOINT</h1>
+      <div class="tag">your rig, remembered</div>
+    </div>
+    <div class="header-right" id="headerRight">loading…</div>
+  </div>
+
+  <div class="day-bar" id="dayBar"></div>
+
+  <div class="layout" id="layoutWrap" style="display:none;">
+    <div class="sidebar">
+      <div class="add-exercise">
+        <input id="newExName" type="text" placeholder="add exercise to this day…" maxlength="60">
+        <button id="addExBtn" aria-label="Add exercise">+</button>
+      </div>
+      <div id="exerciseList"></div>
+    </div>
+    <div class="main" id="mainPanel"></div>
+  </div>
+  <div id="noDayPlaceholder"></div>
+
+</div>
+<div class="status" id="statusLine"></div>
+
+<script>
+(function(){
+  const STORE_KEY = 'setpoint-data-v2';
+  let root = { profiles: [], activeProfileId: null };
+  let ready = false;
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function todayStr(){ return new Date().toISOString().slice(0,10); }
+  function fmtDate(d){
+    const dt = new Date(d + 'T00:00:00');
+    return dt.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function setStatus(msg){
+    document.getElementById('statusLine').textContent = msg;
+    if(msg) setTimeout(()=>{ if(document.getElementById('statusLine').textContent===msg) document.getElementById('statusLine').textContent=''; }, 2200);
+  }
+
+  // ---- persistence ----
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        if(parsed && Array.isArray(parsed.profiles)) root = parsed;
+      }
+    }catch(e){ /* first run or storage unavailable */ }
+
+    if(!root.profiles.length){
+      const p = newProfileObj('You');
+      root.profiles.push(p);
+      root.activeProfileId = p.id;
+    }
+    if(!root.activeProfileId || !root.profiles.find(p=>p.id===root.activeProfileId)){
+      root.activeProfileId = root.profiles[0].id;
+    }
+    ready = true;
+    renderAll();
+  }
+
+  function save(){
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify(root));
+      setStatus('saved');
+    }catch(e){
+      setStatus('save failed — storage may be full or disabled');
+    }
+  }
+
+  function newProfileObj(name){
+    return { id: uid(), name, activeDayId: null, activeExerciseId: null, days: [], exercises: [], entries: [] };
+  }
+
+  function activeProfile(){
+    return root.profiles.find(p=>p.id===root.activeProfileId);
+  }
+
+  // ---- profiles ----
+  function addProfile(){
+    const name = prompt('Name for the new profile:');
+    if(!name || !name.trim()) return;
+    const p = newProfileObj(name.trim());
+    root.profiles.push(p);
+    root.activeProfileId = p.id;
+    save(); renderAll();
+  }
+  function switchProfile(id){
+    root.activeProfileId = id;
+    save(); renderAll();
+  }
+  function deleteProfile(id){
+    if(root.profiles.length===1){ setStatus("can't delete the only profile"); return; }
+    const p = root.profiles.find(x=>x.id===id);
+    if(!confirm('Delete profile "' + p.name + '" and everything logged under it?')) return;
+    root.profiles = root.profiles.filter(x=>x.id!==id);
+    if(root.activeProfileId===id) root.activeProfileId = root.profiles[0].id;
+    save(); renderAll();
+  }
+
+  // ---- days ----
+  function addDay(){
+    const name = prompt('Name this day (e.g. Leg day, Push day):');
+    if(!name || !name.trim()) return;
+    const p = activeProfile();
+    const day = { id: uid(), name: name.trim() };
+    p.days.push(day);
+    p.activeDayId = day.id;
+    save(); renderAll();
+  }
+  function switchDay(id){
+    activeProfile().activeDayId = id;
+    activeProfile().activeExerciseId = null;
+    save(); renderAll();
+  }
+  function deleteDay(id){
+    const p = activeProfile();
+    if(!confirm('Delete this day and all exercises logged under it?')) return;
+    const exIds = p.exercises.filter(e=>e.dayId===id).map(e=>e.id);
+    p.exercises = p.exercises.filter(e=>e.dayId!==id);
+    p.entries = p.entries.filter(e=>!exIds.includes(e.exerciseId));
+    p.days = p.days.filter(d=>d.id!==id);
+    if(p.activeDayId===id) p.activeDayId = p.days[0] ? p.days[0].id : null;
+    p.activeExerciseId = null;
+    save(); renderAll();
+  }
+
+  // ---- exercises ----
+  function addExercise(name){
+    name = name.trim();
+    if(!name) return;
+    const p = activeProfile();
+    if(!p.activeDayId){ setStatus('add a day first'); return; }
+    const ex = { id: uid(), dayId: p.activeDayId, name, createdAt: todayStr() };
+    p.exercises.push(ex);
+    p.activeExerciseId = ex.id;
+    save(); renderAll();
+  }
+  function deleteExercise(id){
+    if(!confirm('Delete this exercise and all its logged entries?')) return;
+    const p = activeProfile();
+    p.exercises = p.exercises.filter(e=>e.id!==id);
+    p.entries = p.entries.filter(e=>e.exerciseId!==id);
+    if(p.activeExerciseId===id){
+      const remaining = p.exercises.filter(e=>e.dayId===p.activeDayId);
+      p.activeExerciseId = remaining[0] ? remaining[0].id : null;
+    }
+    save(); renderAll();
+  }
+
+  // ---- entries ----
+  function addEntry(exerciseId, data){
+    const p = activeProfile();
+    p.entries.push(Object.assign({ id: uid(), exerciseId }, data));
+    save(); renderAll();
+  }
+  function deleteEntry(id){
+    const p = activeProfile();
+    p.entries = p.entries.filter(e=>e.id!==id);
+    save(); renderAll();
+  }
+  function entriesFor(exerciseId){
+    const p = activeProfile();
+    return p.entries.filter(e=>e.exerciseId===exerciseId)
+      .sort((a,b)=> b.date.localeCompare(a.date) || (b.id > a.id ? 1 : -1));
+  }
+  function exercisesForDay(dayId){
+    return activeProfile().exercises.filter(e=>e.dayId===dayId);
+  }
+
+  // ---- render ----
+  function renderProfileBar(){
+    const bar = document.getElementById('profileBar');
+    bar.innerHTML = root.profiles.map(p=>{
+      return '<div class="profile-pill' + (p.id===root.activeProfileId?' active':'') + '" data-p="' + p.id + '">' +
+        escapeHtml(p.name) +
+        (root.profiles.length>1 ? '<button class="del" data-pdel="' + p.id + '" aria-label="Delete profile">✕</button>' : '') +
+      '</div>';
+    }).join('') + '<button class="profile-add" id="addProfileBtn">+ profile</button>';
+
+    bar.querySelectorAll('.profile-pill').forEach(el=>{
+      el.addEventListener('click', (ev)=>{
+        if(ev.target.dataset.pdel) return;
+        switchProfile(el.dataset.p);
+      });
+    });
+    bar.querySelectorAll('[data-pdel]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); deleteProfile(btn.dataset.pdel); });
+    });
+    document.getElementById('addProfileBtn').addEventListener('click', addProfile);
+  }
+
+  function renderDayBar(){
+    const p = activeProfile();
+    const bar = document.getElementById('dayBar');
+    let html = p.days.map(d=>{
+      return '<div class="day-tab' + (d.id===p.activeDayId?' active':'') + '" data-d="' + d.id + '">' +
+        escapeHtml(d.name) +
+        '<button class="del" data-ddel="' + d.id + '" aria-label="Delete day">✕</button>' +
+      '</div>';
+    }).join('');
+    html += '<button class="day-add" id="addDayBtn">+ add day</button>';
+    bar.innerHTML = html;
+
+    bar.querySelectorAll('.day-tab').forEach(el=>{
+      el.addEventListener('click', (ev)=>{
+        if(ev.target.dataset.ddel) return;
+        switchDay(el.dataset.d);
+      });
+    });
+    bar.querySelectorAll('[data-ddel]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); deleteDay(btn.dataset.ddel); });
+    });
+    document.getElementById('addDayBtn').addEventListener('click', addDay);
+  }
+
+  function renderSidebar(){
+    const p = activeProfile();
+    const list = document.getElementById('exerciseList');
+    const exs = exercisesForDay(p.activeDayId);
+    if(!exs.length){
+      list.innerHTML = '<div class="empty-side">no exercises in this day yet — add your first above.</div>';
+      return;
+    }
+    list.innerHTML = exs.map(ex=>{
+      const es = entriesFor(ex.id);
+      const last = es[0];
+      const metaText = last ? (fmtDate(last.date) + ' · ' + last.weight + (last.unit||'kg')) : 'no entries yet';
+      return '<div class="ex-item' + (ex.id===p.activeExerciseId ? ' active':'') + '" data-id="' + ex.id + '">' +
+        '<button class="del" data-del="' + ex.id + '" aria-label="Delete exercise">✕</button>' +
+        '<div class="name">' + escapeHtml(ex.name) + '</div>' +
+        '<div class="meta">' + escapeHtml(metaText) + '</div>' +
+      '</div>';
+    }).join('');
+
+    list.querySelectorAll('.ex-item').forEach(el=>{
+      el.addEventListener('click', (ev)=>{
+        if(ev.target.dataset.del) return;
+        activeProfile().activeExerciseId = el.dataset.id;
+        save(); renderAll();
+      });
+    });
+    list.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); deleteExercise(btn.dataset.del); });
+    });
+  }
+
+  function renderMain(){
+    const p = activeProfile();
+    const main = document.getElementById('mainPanel');
+    const ex = p.exercises.find(e=>e.id===p.activeExerciseId && e.dayId===p.activeDayId);
+    if(!ex){
+      main.innerHTML = '<div class="placeholder">select or add an exercise in this day to begin logging</div>';
+      return;
+    }
+    const es = entriesFor(ex.id);
+    const last = es[0];
+
+    let placard = '<div class="placard"><p class="ex-name">' + escapeHtml(ex.name) + '</p>';
+    if(last){
+      placard += '<p class="as-of">as of ' + fmtDate(last.date) + '</p>';
+      placard += '<div class="stat-row">' +
+        '<div class="stat"><div class="val">' + escapeHtml(String(last.weight)) + '<span class="unit">' + escapeHtml(last.unit||'kg') + '</span></div><div class="lbl">weight</div></div>' +
+        (last.sets ? '<div class="stat"><div class="val">' + escapeHtml(String(last.sets)) + '<span class="unit">sets</span></div><div class="lbl">volume</div></div>' : '') +
+        (last.reps ? '<div class="stat"><div class="val">' + escapeHtml(String(last.reps)) + '<span class="unit">reps</span></div><div class="lbl">per set</div></div>' : '') +
+      '</div>';
+      if(last.settings) placard += '<div class="settings-line">' + escapeHtml(last.settings) + '</div>';
+      if(last.notes) placard += '<div class="notes-line">' + escapeHtml(last.notes) + '</div>';
+    } else {
+      placard += '<p class="no-entries">no entries logged yet — add your first session below.</p>';
+    }
+    placard += '</div>';
+
+    let log = '<p class="log-title">history</p>';
+    if(es.length){
+      log += '<div class="log-list">' + es.map(en=>{
+        return '<div class="log-row">' +
+          '<span class="date">' + escapeHtml(fmtDate(en.date)) + '</span>' +
+          '<span class="weight">' + escapeHtml(String(en.weight)) + ' ' + escapeHtml(en.unit||'kg') + '</span>' +
+          '<span class="setsreps">' + (en.sets||'—') + '×' + (en.reps||'—') + '</span>' +
+          '<span class="settings">' + escapeHtml(en.settings || '') + '</span>' +
+          '<button class="del" data-del-entry="' + en.id + '" aria-label="Delete entry">✕</button>' +
+        '</div>';
+      }).join('') + '</div>';
+    } else {
+      log += '<div class="log-empty">nothing logged for this exercise yet.</div>';
+    }
+
+    const form = '<div class="entry-form"><h3>log a session</h3>' +
+      '<div class="form-grid">' +
+        '<div class="field"><label>date</label><input type="date" id="f-date" value="' + todayStr() + '"></div>' +
+        '<div class="field"><label>weight</label><input type="number" id="f-weight" step="0.5" placeholder="60"></div>' +
+        '<div class="field"><label>unit</label><select id="f-unit"><option value="kg">kg</option><option value="lb">lb</option></select></div>' +
+        '<div class="field"><label>sets × reps</label><div style="display:flex;gap:6px;"><input type="number" id="f-sets" placeholder="3" style="width:50%"><input type="number" id="f-reps" placeholder="10" style="width:50%"></div></div>' +
+        '<div class="field field-wide"><label>machine settings</label><input type="text" id="f-settings" placeholder="seat 4, pin 8, handles wide"></div>' +
+        '<div class="field field-wide"><label>notes</label><input type="text" id="f-notes" placeholder="optional — how it felt"></div>' +
+      '</div>' +
+      '<div class="submit-row"><button id="submitEntry">Log session</button></div>' +
+    '</div>';
+
+    main.innerHTML = placard + log + form;
+
+    main.querySelectorAll('[data-del-entry]').forEach(btn=>{
+      btn.addEventListener('click', ()=> deleteEntry(btn.dataset.delEntry));
+    });
+    document.getElementById('submitEntry').addEventListener('click', ()=>{
+      const weight = document.getElementById('f-weight').value;
+      const date = document.getElementById('f-date').value || todayStr();
+      if(!weight){ setStatus('enter a weight first'); return; }
+      addEntry(ex.id, {
+        date,
+        weight: Number(weight),
+        unit: document.getElementById('f-unit').value,
+        sets: document.getElementById('f-sets').value ? Number(document.getElementById('f-sets').value) : null,
+        reps: document.getElementById('f-reps').value ? Number(document.getElementById('f-reps').value) : null,
+        settings: document.getElementById('f-settings').value.trim(),
+        notes: document.getElementById('f-notes').value.trim()
+      });
+    });
+  }
+
+  function renderAll(){
+    if(!ready) return;
+    const p = activeProfile();
+
+    document.getElementById('headerRight').textContent =
+      p.days.length + ' day' + (p.days.length===1?'':'s') + ' · ' + p.exercises.length + ' exercise' + (p.exercises.length===1?'':'s');
+
+    renderProfileBar();
+    renderDayBar();
+
+    const layoutWrap = document.getElementById('layoutWrap');
+    const noDay = document.getElementById('noDayPlaceholder');
+    if(!p.days.length){
+      layoutWrap.style.display = 'none';
+      noDay.innerHTML = '<div class="placeholder">no training days yet for ' + escapeHtml(p.name) + ' — add one above (e.g. "Leg day") to start logging.</div>';
+    } else {
+      noDay.innerHTML = '';
+      layoutWrap.style.display = 'grid';
+      if(!p.activeDayId) p.activeDayId = p.days[0].id;
+      renderSidebar();
+      renderMain();
+    }
+  }
+
+  document.getElementById('addExBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('newExName');
+    addExercise(input.value);
+    input.value = '';
+  });
+  document.getElementById('newExName').addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){ addExercise(e.target.value); e.target.value=''; }
+  });
+
+  load();
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+})();
+</script>
+</body>
+</html>
