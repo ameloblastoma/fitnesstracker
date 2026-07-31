@@ -78,6 +78,14 @@
   }
   .header-right{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);text-align:right;}
 
+  .backup-bar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;}
+  .backup-btn{
+    background:none;border:1px solid var(--border);color:var(--text-faint);
+    padding:5px 12px;border-radius:3px;cursor:pointer;font-family:'IBM Plex Mono',monospace;
+    font-size:11px;letter-spacing:.3px;
+  }
+  .backup-btn:hover{border-color:var(--brass);color:var(--brass);}
+
   /* day tabs */
   .day-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
   .day-tab{
@@ -221,6 +229,12 @@
 <body>
 <div class="app">
 
+  <div class="backup-bar">
+    <button class="backup-btn" id="exportBtn">↓ export backup</button>
+    <button class="backup-btn" id="importBtn">↑ import backup</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none;">
+  </div>
+
   <div class="profile-bar" id="profileBar"></div>
 
   <div class="header">
@@ -297,6 +311,50 @@
     }catch(e){
       setStatus('save failed — storage may be full or disabled');
     }
+  }
+
+  // ---- backup / restore ----
+  function exportData(){
+    try{
+      const dataStr = JSON.stringify(root, null, 2);
+      const blob = new Blob([dataStr], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'setpoint-backup-' + todayStr() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url), 1000);
+      setStatus('backup downloaded');
+    }catch(e){
+      setStatus('export failed');
+    }
+  }
+
+  function importData(file){
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      let parsed;
+      try{
+        parsed = JSON.parse(e.target.result);
+        if(!parsed || !Array.isArray(parsed.profiles)) throw new Error('bad shape');
+      }catch(err){
+        setStatus('import failed — not a valid backup file');
+        return;
+      }
+      if(!confirm('This will replace ALL data currently on this device with the backup file. Continue?')) return;
+      root = parsed;
+      if(!root.activeProfileId || !root.profiles.find(p=>p.id===root.activeProfileId)){
+        root.activeProfileId = root.profiles[0] ? root.profiles[0].id : null;
+      }
+      save();
+      renderAll();
+      setStatus('backup restored');
+    };
+    reader.onerror = ()=> setStatus('could not read that file');
+    reader.readAsText(file);
   }
 
   function newProfileObj(name){
@@ -573,6 +631,16 @@
       renderMain();
     }
   }
+
+  document.getElementById('exportBtn').addEventListener('click', exportData);
+  document.getElementById('importBtn').addEventListener('click', ()=>{
+    document.getElementById('importFile').click();
+  });
+  document.getElementById('importFile').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    importData(file);
+    e.target.value = '';
+  });
 
   document.getElementById('addExBtn').addEventListener('click', ()=>{
     const input = document.getElementById('newExName');
